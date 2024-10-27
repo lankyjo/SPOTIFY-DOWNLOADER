@@ -167,7 +167,11 @@
         document.querySelector('.loader').style.display = 'none'
         document.getElementById('spotifyForm').addEventListener('submit', function(e) {
             e.preventDefault(); // Prevent default form submission
+        document.querySelector('.song-section').style.display = 'none'
             let spotifyLink = document.querySelector('.link-text').value;
+            if(spotifyLink == ''){
+                return
+            }
             // Call fetchSongDetails with the provided Spotify link
                 document.querySelector('.loader').style.display = 'block'
             fetchSongDetails(spotifyLink).catch(err => console.error(err));
