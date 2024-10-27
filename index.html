@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" href="/assets/app_icon.png">
+    <title>Spotify Downloader by lankyJO</title>
+</head>
+<body>
+    <div class="pre-loader">
+        <img src="/assets/iconmonstr-spotify-5.svg">
+    </div>
+    <header>
+        <nav>
+            <a href="#" class="logo">
+                <img src="/assets/iconmonstr-spotify-5.svg">
+                <h3>spotify downloader</h3>
+            </a>
+        </nav>
+    </header>
+
+    <main>
+        <div class="form">
+            <form action="" id="spotifyForm">
+                <div class="header">Enter spotify link</div>
+                <div class="input" >
+                    <input type="text" class="link-text" placeholder="paste spotify">
+                    <div class="placeholder">Paste spotify link</div>
+                </div>
+                <button class="submit" type="submit">Search</button>
+                <button class="paste">Paste</button>
+            </form>
+        </div>
+
+        <div class="loader">
+            <img src="/assets/iconmonstr-spotify-5.svg">
+        </div>
+
+        <div class="error-message">
+            <img src="/assets/iconmonstr-smiley-24.svg" alt="">
+            <p>
+                Song Unavailable at the moment or check link and try again. <br>
+
+            </p>
+        </div>
+
+        <section class="song-section">
+            <div class="song-info">
+                <div class="song-thumbnail">
+                    <img src="/assets/Burna_boy_Outside.jpg">
+                </div>
+                <h1 class="song-artist">Burna Boy</h1>
+                <h2 class="song-title">Ye</h2>
+                <div class="download">
+                    <a href="#" class="download-btn">Download</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+
+    <script>
+        async function pasteFromClipboard(e) {
+            try {
+                e.preventDefault();
+                const text = await navigator.clipboard.readText();
+                document.querySelector('.link-text').value = text;
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        document.querySelector('.paste').addEventListener('click', pasteFromClipboard);
+
+        async function getAccessToken() {
+            const clientId = '68df121c634c4f45b321d45723a6f46e'; // Replace with your Client ID
+            const clientSecret = '24c72b9d62504c2384a498bd18527dec'; // Replace with your Client Secret
+
+            const response = await fetch('https://accounts.spotify.com/api/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': 'Basic ' + btoa(`${clientId}:${clientSecret}`)
+                },
+                body: 'grant_type=client_credentials'
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to get access token');
+            }
+            const data = await response.json();
+            return data.access_token; // Return the access token
+        }
+
+        async function fetchSongDetails(spotifyLink) {
+            const trackId = spotifyLink.split('/').pop().split('?')[0]; // Extract track ID
+
+            const accessToken = await getAccessToken();
+
+            const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+
+            if (response.ok) {
+                const songData = await response.json();
+                const mockData = {
+                    artist: songData.artists[0].name,
+                    title: songData.name,
+                    thumbnail: songData.album.images[0].url,
+                    background: songData.album.images[0].url // You can customize this if needed
+                };
+
+                // Update the UI with fetched data
+                document.querySelector('.song-artist').innerText = mockData.artist;
+                document.querySelector('.song-title').innerText = mockData.title;
+                document.querySelector('.song-thumbnail img').src = mockData.thumbnail;
+                document.querySelector('.song-section').style.backgroundImage = `url(${mockData.background})`; // Set background image
+                document.querySelector('.error-message').style.display = 'none'
+                // Set download link
+                setDownloadLink(trackId);
+            } else {
+                console.error('Failed to fetch song details:', response.statusText);
+                document.querySelector('.loader').style.display = 'none'
+                document.querySelector('.error-message').style.display = 'block'
+            }
+        }
+
+        async function setDownloadLink(trackId) {
+            const url = `https://spotify-downloader9.p.rapidapi.com/downloadSong?songId=https%3A%2F%2Fopen.spotify.com%2Ftrack%2F${trackId}`;
+            const options = {
+                method: 'GET',
+                headers: {
+                    'x-rapidapi-key': 'fcfee64223msh3618aff39cdc6f5p16b8b0jsndaaace61abfd', // Replace with your RapidAPI key
+                    'x-rapidapi-host': 'spotify-downloader9.p.rapidapi.com'
+                }
+            };
+
+            try {
+                const response = await fetch(url, options);
+                const result = await response.json(); // You might want to parse this if it's JSON
+                console.log(result);
+                const downloadBtn = document.querySelector('.download-btn');
+                // Update the download button with the download link
+                console.log(result.data);
+                downloadBtn.href = result.data.downloadLink; // Ensure result is the download link; parse it if necessary
+                downloadBtn.innerText = 'Download Now'; // Update the button text if needed
+                document.querySelector('.song-section').style.display = 'block'
+                document.querySelector('.loader').style.display = 'none'
+                document.querySelector('.link-text').value = ''
+                scrollToBottom()
+            } catch (error) {
+                console.error('Error fetching download link:', error);
+                document.querySelector('.loader').style.display = 'none'
+                document.querySelector('.error-message').style.display = 'block'
+                
+            }
+        }
+        function scrollToBottom() {
+            window.scrollTo({
+                top: document.body.scrollHeight,
+                behavior: 'smooth' // Adds a smooth scrolling effect
+            });
+        }
+        document.querySelector('.loader').style.display = 'none'
+        document.getElementById('spotifyForm').addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent default form submission
+            let spotifyLink = document.querySelector('.link-text').value;
+            // Call fetchSongDetails with the provided Spotify link
+                document.querySelector('.loader').style.display = 'block'
+            fetchSongDetails(spotifyLink).catch(err => console.error(err));
+        });
+    </script>
+</body>
+</html>
